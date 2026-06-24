@@ -21,15 +21,37 @@ export default function DetailModal({
 }: DetailModalProps) {
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [seasonData, setSeasonData] = useState<Season | null>(null);
+  const [availableSeasons, setAvailableSeasons] = useState<Season[]>([]);
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState(false);
   const [episodeError, setEpisodeError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!movie) return;
 
-    // Reset selected season on movie change
+    // Reset states on movie change
     setSelectedSeason(1);
     setSeasonData(null);
+    setAvailableSeasons(movie.seasons || []);
+
+    // NEW LOGIC: Fetch full show details to get seasons if they are missing (e.g. from search results)
+    if (movie.media_type === 'tv' && (!movie.seasons || movie.seasons.length === 0)) {
+      const fetchShowDetails = async () => {
+        try {
+          const res = await fetch(`/api/tv/${movie.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.seasons) {
+              // Filter out "Specials" (Season 0) 
+              const realSeasons = data.seasons.filter((s: any) => s.season_number > 0);
+              setAvailableSeasons(realSeasons);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching show details:', err);
+        }
+      };
+      fetchShowDetails();
+    }
   }, [movie]);
 
   useEffect(() => {
@@ -63,7 +85,7 @@ export default function DetailModal({
   const releaseYear = (movie.release_date || movie.first_air_date || '').split('-')[0] || 'N/A';
 
   const backdropUrl = movie.backdrop_path && movie.backdrop_path.trim() !== ''
-    ? (movie.backdrop_path.startsWith('http') ? movie.backdrop_path : `https://image.tmdb.org/t/p/original${movie.backdrop_path}`)
+    ? (movie.backdrop_path.startsWith('http') ? movie.backdrop_path : `https://wsrv.nl/?url=image.tmdb.org/t/p/original${movie.backdrop_path}`)
     : 'https://via.placeholder.com/1920x1080/141414/ffffff?text=RE-FLIX';
 
   const progress = getProgress(movie.id);
@@ -74,13 +96,11 @@ export default function DetailModal({
       className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm transition-opacity duration-300"
       onClick={onClose}
     >
-      {/* Modal Card */}
       <div
         id="detail-modal-card"
         className="relative bg-[#181818] text-white w-full max-w-3xl rounded-lg overflow-hidden shadow-2xl border border-white/10 my-8 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
         <button
           id="close-modal-btn"
           onClick={onClose}
@@ -89,7 +109,6 @@ export default function DetailModal({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Hero Banner Section */}
         <div className="relative aspect-[16/9] w-full bg-black select-none">
           <img
             src={backdropUrl}
@@ -97,10 +116,8 @@ export default function DetailModal({
             className="w-full h-full object-cover brightness-90"
             referrerPolicy="no-referrer"
           />
-          {/* Overlay Gradients */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/30 to-transparent"></div>
 
-          {/* Core Info Floating */}
           <div className="absolute bottom-6 left-6 md:left-10 z-10 space-y-3 pr-6">
             <h2 className="text-2xl md:text-4xl font-extrabold text-white drop-shadow-lg tracking-tight">
               {titleText}
@@ -138,9 +155,7 @@ export default function DetailModal({
           </div>
         </div>
 
-        {/* Content Section */}
         <div className="p-6 md:p-10 space-y-6">
-          {/* Metadata Bar */}
           <div className="flex flex-wrap items-center gap-3.5 text-xs md:text-sm font-medium">
             <span className="text-green-500 font-bold flex items-center font-mono">
               <Star className="w-4 h-4 fill-green-500 text-green-500 inline mr-1" />
@@ -150,9 +165,9 @@ export default function DetailModal({
             <span className="border border-white/30 px-1.5 py-0.2 rounded text-[10px] uppercase font-bold text-gray-300 font-sans tracking-wide">
               {movie.media_type === 'movie' ? 'Movie' : 'TV Series'}
             </span>
-            {movie.media_type === 'tv' && movie.seasons && (
+            {movie.media_type === 'tv' && availableSeasons.length > 0 && (
               <span className="text-gray-400 font-mono">
-                {movie.seasons.length} Season{movie.seasons.length > 1 ? 's' : ''}
+                {availableSeasons.length} Season{availableSeasons.length > 1 ? 's' : ''}
               </span>
             )}
             {progress && (
@@ -162,7 +177,6 @@ export default function DetailModal({
             )}
           </div>
 
-          {/* Grid Layout: Plot & Genres */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-3">
               <p className="text-gray-300 text-xs sm:text-sm md:text-base leading-relaxed font-normal">
@@ -184,7 +198,6 @@ export default function DetailModal({
             </div>
           </div>
 
-          {/* TV Shows Season & Episodes Section */}
           {movie.media_type === 'tv' && (
             <div className="border-t border-white/10 pt-6 space-y-4" id="series-episodes-section">
               <div className="flex items-center justify-between">
@@ -192,15 +205,14 @@ export default function DetailModal({
                   Episodes
                 </h3>
 
-                {/* Season Dropdown Selector */}
-                {movie.seasons && movie.seasons.length > 0 && (
+                {availableSeasons.length > 0 && (
                   <select
                     id="season-selector-dropdown"
                     value={selectedSeason}
                     onChange={(e) => setSelectedSeason(Number(e.target.value))}
                     className="bg-[#242424] text-white border border-white/20 px-3.5 py-1.5 rounded-md outline-none text-xs md:text-sm font-semibold cursor-pointer focus:border-red-500 hover:bg-[#323232] transition-colors"
                   >
-                    {movie.seasons.map((s) => (
+                    {availableSeasons.map((s) => (
                       <option key={s.season_number} value={s.season_number}>
                         {s.name || `Season ${s.season_number}`}
                       </option>
@@ -209,7 +221,6 @@ export default function DetailModal({
                 )}
               </div>
 
-              {/* Episode Rows Container */}
               <div className="space-y-4 pt-2">
                 {isLoadingEpisodes ? (
                   <div className="flex flex-col items-center justify-center py-12 space-y-2">
@@ -235,13 +246,11 @@ export default function DetailModal({
                           onClick={() => onPlay(movie, selectedSeason, episode.episode_number)}
                           className="flex items-start space-x-4 p-3 rounded-lg bg-[#222222] hover:bg-[#2e2e2e] transition-colors cursor-pointer border border-transparent hover:border-white/10 group relative"
                         >
-                          {/* Episode Index and Play Button Overlay */}
                           <div className="flex-none w-8 text-gray-500 font-extrabold text-sm md:text-base flex items-center justify-center font-mono self-center">
                             <span className="group-hover:hidden">{episode.episode_number}</span>
                             <Play className="w-4 h-4 text-white fill-white hidden group-hover:block ml-1" />
                           </div>
 
-                          {/* Episode Text Meta */}
                           <div className="flex-1 space-y-1">
                             <div className="flex flex-wrap items-baseline justify-between gap-1.5">
                               <h4 className="text-xs md:text-sm font-bold text-white group-hover:text-[#e50914] transition-colors">
