@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
-// FIX: Added .js to the end of the import path. 
-// In "type": "module" projects, Node.js requires explicit file extensions.
+// Keeping the .js extension so it doesn't break Vercel!
 import { CURATED_MOVIES, CURATED_TV_SHOWS } from '../src/data/curatedMovies.js';
 
 dotenv.config();
@@ -43,7 +42,6 @@ app.get('/api/trending', async (req: Request, res: Response) => {
     }));
     res.json({ results });
   } catch (error) {
-    console.log('TMDB Trending fetch failed, using curated fallback:', (error as Error).message);
     const merged = [
       ...CURATED_MOVIES.slice(0, 5),
       ...CURATED_TV_SHOWS.slice(0, 5)
@@ -117,7 +115,22 @@ app.get('/api/search', async (req: Request, res: Response) => {
   }
 });
 
-// 6. TV Season Detail Route
+// 6. NEW: Full TV Show Details Route (To fetch dynamic season lists)
+app.get('/api/tv/:id', async (req: Request, res: Response) => {
+  const showId = parseInt(req.params.id);
+  try {
+    const data = await fetchFromTMDB(`tv/${showId}`);
+    res.json(data);
+  } catch (error) {
+    const show = CURATED_TV_SHOWS.find(s => s.id === showId);
+    if (show) {
+      return res.json(show);
+    }
+    res.json({ seasons: [{ season_number: 1, name: 'Season 1' }] });
+  }
+});
+
+// 7. TV Season Episode Detail Route
 app.get('/api/tv/:id/season/:season', async (req: Request, res: Response) => {
   const showId = parseInt(req.params.id);
   const seasonNum = parseInt(req.params.season);
@@ -150,5 +163,4 @@ app.get('/api/tv/:id/season/:season', async (req: Request, res: Response) => {
   }
 });
 
-// CRITICAL FOR VERCEL: Do not use app.listen(). Instead, export the Express app.
 export default app;
