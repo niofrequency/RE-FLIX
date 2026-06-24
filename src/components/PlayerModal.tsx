@@ -1,3 +1,4 @@
+// src/components/PlayerModal.tsx
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
 import { MediaItem } from '../types';
@@ -34,6 +35,8 @@ export default function PlayerModal({
     const progressQuery = hasProgress ? `&progress=${Math.floor(saved.currentTime)}` : '';
 
     // 2. Format embedding URL based on asset type
+    // THIS IS WHERE VIDKING IS USED! 
+    // You can change 'color=e50914' to any hex code you want.
     let url = '';
     if (movie.media_type === 'movie') {
       url = `https://www.vidking.net/embed/movie/${movie.id}?color=e50914&autoPlay=true${progressQuery}`;
