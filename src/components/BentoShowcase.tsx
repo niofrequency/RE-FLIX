@@ -2,11 +2,12 @@ import React from 'react';
 import { Play } from 'lucide-react';
 import { MediaItem, ProgressState } from '../types';
 
+// PROXY FIX: Route images through wsrv.nl to bypass ISP DNS blocks
 function getSafeBackdropUrl(path: string | undefined | null): string {
   if (!path || path.trim() === '') {
     return 'https://via.placeholder.com/1920x1080/141414/ffffff?text=RE-FLIX';
   }
-  return path.startsWith('http') ? path : `https://image.tmdb.org/t/p/w500${path}`;
+  return path.startsWith('http') ? path : `https://wsrv.nl/?url=image.tmdb.org/t/p/w500${path}`;
 }
 
 interface BentoShowcaseProps {
