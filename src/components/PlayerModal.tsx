@@ -1,4 +1,3 @@
-// src/components/PlayerModal.tsx
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react';
 import { MediaItem } from '../types';
@@ -29,31 +28,29 @@ export default function PlayerModal({
     setIsLoading(true);
     setHasError(false);
 
-    // 1. Check for saved watching progress for this specific asset ID
+    // 1. Check for saved watching progress
     const saved = getProgress(movie.id);
     const hasProgress = saved && saved.currentTime > 5;
     const progressQuery = hasProgress ? `&progress=${Math.floor(saved.currentTime)}` : '';
 
-    // 2. Format embedding URL based on asset type
-    // THIS IS WHERE VIDKING IS USED! 
-    // You can change 'color=e50914' to any hex code you want.
+    // 2. Format embedding URL
+    // SWAPPED TO VIDSRC.ME TEMPORARILY DUE TO VIDKING UPSTREAM SERVER OUTAGE
     let url = '';
     if (movie.media_type === 'movie') {
-      url = `https://www.vidking.net/embed/movie/${movie.id}?color=e50914&autoPlay=true${progressQuery}`;
+      // Alternative: https://vidsrc.me/embed/movie?tmdb={movie.id}
+      url = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
     } else {
-      url = `https://www.vidking.net/embed/tv/${movie.id}/${season}/${episode}?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true${progressQuery}`;
+      url = `https://vidsrc.me/embed/tv?tmdb=${movie.id}&season=${season}&episode=${episode}`;
     }
 
     setIframeUrl(url);
   }, [movie, season, episode]);
 
-  // 3. Central Window Message Listener for Vidking PLAYER_EVENT
   useEffect(() => {
     if (!movie) return;
 
     const handlePlayerMessage = (event: MessageEvent) => {
       try {
-        // Parse payload if it comes as a string, otherwise use directly
         const payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
 
         if (payload && payload.type === 'PLAYER_EVENT') {
@@ -69,7 +66,6 @@ export default function PlayerModal({
           } = payload.data;
 
           if (['timeupdate', 'pause', 'ended'].includes(evType)) {
-            // Save state immediately to localStorage
             saveProgress(
               mediaId || movie.id,
               currentTime,
@@ -82,14 +78,13 @@ export default function PlayerModal({
               eNum || episode
             );
 
-            // Notify parent to refresh list (like Continue Watching)
             if (onProgressUpdate) {
               onProgressUpdate();
             }
           }
         }
       } catch (err) {
-        // Benign: Ignore non-JSON messages or messages from other extensions/iframes
+        // Ignore non-JSON messages
       }
     };
 
@@ -110,7 +105,6 @@ export default function PlayerModal({
       id="video-player-overlay"
       className="fixed inset-0 bg-black z-50 flex flex-col justify-between overflow-hidden"
     >
-      {/* Immersive Top Control Bar */}
       <div
         id="player-control-bar"
         className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 via-black/40 to-transparent p-4 md:p-6 flex items-center justify-between z-30 transition-opacity duration-300 hover:opacity-100 opacity-100 group"
@@ -134,7 +128,6 @@ export default function PlayerModal({
           </div>
         </div>
 
-        {/* Outer Direct Link indicator for player */}
         <div className="flex items-center space-x-2">
           <a
             href={iframeUrl}
@@ -148,7 +141,6 @@ export default function PlayerModal({
         </div>
       </div>
 
-      {/* Primary Video Canvas - 16:9 Responsive Ratio Box */}
       <div className="relative flex-1 w-full h-full bg-black flex items-center justify-center">
         {isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-10 space-y-4">
@@ -158,7 +150,7 @@ export default function PlayerModal({
                 Establishing Stream...
               </p>
               <p className="text-gray-400 text-xs mt-1 font-mono">
-                Connecting to Vidking Player Engine
+                Connecting to Backup Engine
               </p>
             </div>
           </div>
@@ -177,7 +169,6 @@ export default function PlayerModal({
               onClick={() => {
                 setHasError(false);
                 setIsLoading(true);
-                // Force URL reload
                 const url = iframeUrl;
                 setIframeUrl('');
                 setTimeout(() => setIframeUrl(url), 100);
@@ -196,7 +187,6 @@ export default function PlayerModal({
             allowFullScreen
             onLoad={() => {
               setIsLoading(false);
-              // Set up safe check timeout in case page crashes
               setTimeout(() => setIsLoading(false), 2000);
             }}
             onError={() => {
@@ -209,9 +199,8 @@ export default function PlayerModal({
         )}
       </div>
 
-      {/* Progress Track Status Strip (at the bottom) */}
       <div className="bg-[#141414] py-1 text-center border-t border-white/5 select-none text-[9px] md:text-[10px] text-gray-500 font-mono">
-        RE-FLIX Vidking Engine • Hex Color Red #e50914 Applied • Autoplay Enabled
+        RE-FLIX Engine • Backup Provider Active
       </div>
     </div>
   );
