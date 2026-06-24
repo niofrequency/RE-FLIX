@@ -18,8 +18,10 @@ export default function HeroBanner({ movie, onPlay, onInfo }: HeroBannerProps) {
   }
 
   const titleText = movie.title || movie.name || '';
+  
+  // PROXY FIX: Route images through wsrv.nl to bypass ISP DNS blocks
   const backdropUrl = movie.backdrop_path && movie.backdrop_path.trim() !== ''
-    ? (movie.backdrop_path.startsWith('http') ? movie.backdrop_path : `https://image.tmdb.org/t/p/original${movie.backdrop_path}`)
+    ? (movie.backdrop_path.startsWith('http') ? movie.backdrop_path : `https://wsrv.nl/?url=image.tmdb.org/t/p/original${movie.backdrop_path}`)
     : 'https://via.placeholder.com/1920x1080/141414/ffffff?text=RE-FLIX';
 
   // Check if there is saved watching progress to display a resume icon/indicator
