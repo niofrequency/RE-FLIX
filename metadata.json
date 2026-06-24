@@ -1,0 +1,6 @@
+{
+  "name": "RE-FLIX",
+  "description": "A fully functional Netflix-clone web application using React, Tailwind CSS, and TypeScript, leveraging TMDB metadata and the Vidking player with progress tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
