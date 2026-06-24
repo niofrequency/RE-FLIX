@@ -28,12 +28,14 @@ export default function MovieCard({ movie, onPlay, onInfo, isFavorite, onToggleF
   }, [movie.id]);
 
   const titleText = movie.title || movie.name || 'Untitled';
+  
+  // PROXY FIX: Route images through wsrv.nl to bypass ISP DNS blocks
   const posterUrl = movie.poster_path && movie.poster_path.trim() !== ''
-    ? (movie.poster_path.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w500${movie.poster_path}`)
+    ? (movie.poster_path.startsWith('http') ? movie.poster_path : `https://wsrv.nl/?url=image.tmdb.org/t/p/w500${movie.poster_path}`)
     : 'https://via.placeholder.com/500x750/141414/ffffff?text=RE-FLIX';
 
   const backdropUrl = movie.backdrop_path && movie.backdrop_path.trim() !== ''
-    ? (movie.backdrop_path.startsWith('http') ? movie.backdrop_path : `https://image.tmdb.org/t/p/w500${movie.backdrop_path}`)
+    ? (movie.backdrop_path.startsWith('http') ? movie.backdrop_path : `https://wsrv.nl/?url=image.tmdb.org/t/p/w500${movie.backdrop_path}`)
     : posterUrl;
 
   // Resolve genres (first two genres)
