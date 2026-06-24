@@ -16,10 +16,12 @@ app.use(express.json());
 // Helper function to fetch from TMDB with fallback
 async function fetchFromTMDB(endpoint: string, queryParams: Record<string, string> = {}) {
   if (!TMDB_API_KEY) {
+    console.error('❌ ERROR: TMDB_API_KEY is missing! Make sure your .env file is created and contains your key.');
     throw new Error('No TMDB API Key configured');
   }
 
-  const url = new URL(`https://api.themoviedb.org/3/${endpoint}`);
+  // PROXY FIX: Using api.tmdb.org instead of api.themoviedb.org to bypass ISP DNS blocks
+  const url = new URL(`https://api.tmdb.org/3/${endpoint}`);
   url.searchParams.append('api_key', TMDB_API_KEY);
   for (const [key, value] of Object.entries(queryParams)) {
     url.searchParams.append(key, value);
@@ -44,7 +46,6 @@ app.get('/api/trending', async (req: Request, res: Response) => {
     res.json({ results });
   } catch (error) {
     console.log('TMDB Trending fetch failed, using curated fallback:', (error as Error).message);
-    // Merge curated movies and TV shows for trending fallback
     const merged = [
       ...CURATED_MOVIES.slice(0, 5),
       ...CURATED_TV_SHOWS.slice(0, 5)
@@ -122,7 +123,7 @@ app.get('/api/search', async (req: Request, res: Response) => {
   }
 });
 
-// 6. TV Season Detail Route (including full season support)
+// 6. TV Season Detail Route
 app.get('/api/tv/:id/season/:season', async (req: Request, res: Response) => {
   const showId = parseInt(req.params.id);
   const seasonNum = parseInt(req.params.season);
@@ -142,8 +143,7 @@ app.get('/api/tv/:id/season/:season', async (req: Request, res: Response) => {
       }
     }
 
-    // Fallback: Generate dynamic season episodes if the user clicked on some random TMDB TV ID
-    // which allows the episodes sidebar to still work perfectly for any TV series
+    // Fallback: Generate dynamic season episodes
     const episodeCount = 10;
     const episodes = Array.from({ length: episodeCount }, (_, i) => ({
       episode_number: i + 1,
