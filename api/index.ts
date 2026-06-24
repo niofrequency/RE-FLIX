@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
-// Adjusted import path because this file is inside the /api folder now
-import { CURATED_MOVIES, CURATED_TV_SHOWS } from '../src/data/curatedMovies';
+// FIX: Added .js to the end of the import path. 
+// In "type": "module" projects, Node.js requires explicit file extensions.
+import { CURATED_MOVIES, CURATED_TV_SHOWS } from '../src/data/curatedMovies.js';
 
 dotenv.config();
 
