@@ -211,7 +211,7 @@ export default function App() {
                   className="aspect-[2/3] bg-[#181818] rounded-md overflow-hidden relative group cursor-pointer border border-white/5 hover:border-white/20 transition-transform duration-300 transform hover:scale-[1.03]"
                 >
                   <img
-                    src={movie.poster_path && movie.poster_path.trim() !== '' ? (movie.poster_path.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w500${movie.poster_path}`) : 'https://via.placeholder.com/500x750/141414/ffffff?text=RE-FLIX'}
+                    src={movie.poster_path && movie.poster_path.trim() !== '' ? (movie.poster_path.startsWith('http') ? movie.poster_path : `https://wsrv.nl/?url=image.tmdb.org/t/p/w500${movie.poster_path}`) : 'https://via.placeholder.com/500x750/141414/ffffff?text=RE-FLIX'}
                     alt={movie.title || movie.name}
                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     referrerPolicy="no-referrer"
@@ -399,7 +399,7 @@ export default function App() {
                       className="aspect-[2/3] bg-[#181818] rounded-md overflow-hidden relative group cursor-pointer border border-white/5 hover:border-white/20 transition-transform duration-300 transform hover:scale-[1.03]"
                     >
                       <img
-                        src={movie.poster_path && movie.poster_path.trim() !== '' ? (movie.poster_path.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w500${movie.poster_path}`) : 'https://via.placeholder.com/500x750/141414/ffffff?text=RE-FLIX'}
+                        src={movie.poster_path && movie.poster_path.trim() !== '' ? (movie.poster_path.startsWith('http') ? movie.poster_path : `https://wsrv.nl/?url=image.tmdb.org/t/p/w500${movie.poster_path}`) : 'https://via.placeholder.com/500x750/141414/ffffff?text=RE-FLIX'}
                         alt={movie.title || movie.name}
                         className="w-full h-full object-cover transition-transform group-hover:scale-105"
                         referrerPolicy="no-referrer"
