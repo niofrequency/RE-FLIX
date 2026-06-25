@@ -22,8 +22,8 @@ export default function PlayerModal({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   
-  // DEFAULT TO VIDSRC: Since Vidking is currently down/blocking, we default to the working backup.
-  const [provider, setProvider] = useState<'vidking' | 'vidsrc'>('vidsrc');
+  // Defaulting to the new cleaner backup provider
+  const [provider, setProvider] = useState<'vidking' | 'premium_backup'>('premium_backup');
 
   // Lock the background from scrolling while the video player is open
   useEffect(() => {
@@ -55,10 +55,11 @@ export default function PlayerModal({
         url = `https://www.vidking.net/embed/tv/${movie.id}/${season}/${episode}?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true${progressQuery}`;
       }
     } else {
+      // NEW BACKUP: Embed.su has a much cleaner, minimalist UI
       if (movie.media_type === 'movie') {
-        url = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
+        url = `https://embed.su/embed/movie/${movie.id}`;
       } else {
-        url = `https://vidsrc.me/embed/tv?tmdb=${movie.id}&season=${season}&episode=${episode}`;
+        url = `https://embed.su/embed/tv/${movie.id}/${season}/${episode}`;
       }
     }
 
@@ -133,9 +134,9 @@ export default function PlayerModal({
           <Server className="w-4 h-4 text-gray-400 ml-2 mr-1" />
           <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mr-2 hidden sm:block">Server:</span>
           <button
-            onClick={() => setProvider('vidsrc')}
+            onClick={() => setProvider('premium_backup')}
             className={`px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer ${
-              provider === 'vidsrc' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
+              provider === 'premium_backup' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
             }`}
           >
             Main Stream
