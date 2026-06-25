@@ -24,9 +24,13 @@ export default function PlayerModal({
 
   // Lock the background from scrolling while the video player is open
   useEffect(() => {
+    // Store original overflow style
+    const originalStyle = window.getComputedStyle(document.body).overflow;
     document.body.style.overflow = 'hidden';
+    
+    // Cleanup on unmount (when modal closes)
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = originalStyle;
     };
   }, []);
 
@@ -104,30 +108,32 @@ export default function PlayerModal({
   const playerLabel =
     movie.media_type === 'movie'
       ? titleText
-      : `${titleText} — S${season} E${episode}`;
+      : `${titleText} — Season ${season} Episode ${episode}`;
 
   return (
-    <div className="fixed inset-0 bg-black z-[100] flex items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center overflow-hidden">
       
       {/* Sleek Auto-Hiding Top Control Bar */}
-      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/90 to-transparent z-30 opacity-0 hover:opacity-100 transition-opacity duration-500 flex items-start px-6 py-8">
-        <button
-          onClick={onClose}
-          className="group flex items-center space-x-3 text-white hover:text-white/80 transition-colors cursor-pointer"
-          title="Back to Browse"
-        >
-          <ArrowLeft className="w-8 h-8 md:w-10 md:h-10 drop-shadow-lg" />
-          <span className="text-base md:text-xl font-bold tracking-wide drop-shadow-md hidden sm:block">
+      <div className="absolute top-0 left-0 w-full p-6 md:p-8 flex items-center justify-between z-50 bg-gradient-to-b from-black/90 via-black/40 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onClose}
+            className="p-3 md:p-4 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-90"
+            title="Back to Browse"
+          >
+            <ArrowLeft className="w-6 h-6 md:w-8 md:h-8" />
+          </button>
+          <h2 className="text-white text-lg md:text-2xl font-bold tracking-wide drop-shadow-md hidden sm:block">
             {playerLabel}
-          </span>
-        </button>
+          </h2>
+        </div>
       </div>
 
       {/* Loading State Overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20">
           <RefreshCw className="w-12 h-12 md:w-16 md:h-16 text-[#e50914] animate-spin mb-4" />
-          <p className="text-white font-medium tracking-wider animate-pulse text-sm md:text-base">
+          <p className="text-white font-medium tracking-wider animate-pulse text-sm md:text-base font-mono">
             Establishing Secure Stream...
           </p>
         </div>
@@ -135,22 +141,32 @@ export default function PlayerModal({
 
       {/* Error State Overlay */}
       {hasError ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20 p-4 text-center">
           <AlertTriangle className="w-16 h-16 text-[#e50914] mb-4" />
-          <h3 className="text-white text-xl font-bold mb-2">Stream Unavailable</h3>
-          <p className="text-gray-400 mb-6 text-sm">The streaming server refused connection.</p>
-          <button
-            onClick={() => {
-              setHasError(false);
-              setIsLoading(true);
-              const url = iframeUrl;
-              setIframeUrl('');
-              setTimeout(() => setIframeUrl(url), 100);
-            }}
-            className="bg-[#e50914] text-white px-6 py-2.5 rounded font-bold hover:bg-red-700 transition-colors cursor-pointer"
-          >
-            Retry Connection
-          </button>
+          <h3 className="text-white text-xl md:text-2xl font-bold mb-2">Stream Unavailable</h3>
+          <p className="text-gray-400 mb-6 text-sm max-w-md">
+            The streaming server refused connection. Please check your network or try a different title.
+          </p>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => {
+                setHasError(false);
+                setIsLoading(true);
+                const url = iframeUrl;
+                setIframeUrl('');
+                setTimeout(() => setIframeUrl(url), 100);
+              }}
+              className="bg-[#e50914] text-white px-6 py-3 rounded-md font-bold hover:bg-red-700 transition-transform active:scale-95 cursor-pointer shadow-lg"
+            >
+              Retry Connection
+            </button>
+            <button
+              onClick={onClose}
+              className="bg-white/10 text-white px-6 py-3 rounded-md font-bold hover:bg-white/20 transition-transform active:scale-95 cursor-pointer shadow-lg border border-white/10"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       ) : iframeUrl ? (
         /* True Edge-to-Edge Iframe */
@@ -162,6 +178,7 @@ export default function PlayerModal({
           allowFullScreen
           onLoad={() => {
             setIsLoading(false);
+            // Fallback clear just in case load fires prematurely
             setTimeout(() => setIsLoading(false), 2000);
           }}
           onError={() => {
