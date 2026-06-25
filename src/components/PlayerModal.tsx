@@ -22,8 +22,8 @@ export default function PlayerModal({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   
-  // Defaulting to the cleaner backup provider
-  const [provider, setProvider] = useState<'vidking' | 'premium_backup'>('premium_backup');
+  // DEFAULT TO VIDSRC: Since Vidking is currently down/blocking, we default to the working backup.
+  const [provider, setProvider] = useState<'vidking' | 'vidsrc'>('vidsrc');
 
   // Lock the background from scrolling while the video player is open
   useEffect(() => {
@@ -56,9 +56,9 @@ export default function PlayerModal({
       }
     } else {
       if (movie.media_type === 'movie') {
-        url = `https://embed.su/embed/movie/${movie.id}`;
+        url = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
       } else {
-        url = `https://embed.su/embed/tv/${movie.id}/${season}/${episode}`;
+        url = `https://vidsrc.me/embed/tv?tmdb=${movie.id}&season=${season}&episode=${episode}`;
       }
     }
 
@@ -133,9 +133,9 @@ export default function PlayerModal({
           <Server className="w-4 h-4 text-gray-400 ml-2 mr-1" />
           <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mr-2 hidden sm:block">Server:</span>
           <button
-            onClick={() => setProvider('premium_backup')}
+            onClick={() => setProvider('vidsrc')}
             className={`px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer ${
-              provider === 'premium_backup' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
+              provider === 'vidsrc' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
             }`}
           >
             Main Stream
@@ -192,12 +192,13 @@ export default function PlayerModal({
           </div>
         </div>
       ) : iframeUrl ? (
-        /* True Edge-to-Edge Iframe (Removed redundant allowFullScreen attribute) */
+        /* True Edge-to-Edge Iframe */
         <iframe
           id="streaming-player-iframe"
           src={iframeUrl}
           className="absolute inset-0 w-full h-full border-0 z-10 bg-black"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          allowFullScreen={true}
           onLoad={() => {
             setIsLoading(false);
             setTimeout(() => setIsLoading(false), 2000);
