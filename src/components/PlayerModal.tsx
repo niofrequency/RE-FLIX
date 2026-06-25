@@ -28,7 +28,8 @@ export default function PlayerModal({
   const [episodeCount, setEpisodeCount] = useState<number>(24);
   const [availableSeasons, setAvailableSeasons] = useState<number[]>([season]);
   
-  const [provider, setProvider] = useState<'vidking' | 'premium_backup'>('premium_backup');
+  // Default to the working vidsrc provider
+  const [provider, setProvider] = useState<'vidking' | 'vidsrc'>('vidsrc');
 
   // Lock the background from scrolling
   useEffect(() => {
@@ -91,10 +92,11 @@ export default function PlayerModal({
         url = `https://www.vidking.net/embed/tv/${movie.id}/${currentSeason}/${currentEpisode}?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true${progressQuery}`;
       }
     } else {
+      // Reverted to vidsrc.me based on working previous code
       if (movie.media_type === 'movie') {
-        url = `https://embed.su/embed/movie/${movie.id}`;
+        url = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
       } else {
-        url = `https://embed.su/embed/tv/${movie.id}/${currentSeason}/${currentEpisode}`;
+        url = `https://vidsrc.me/embed/tv?tmdb=${movie.id}&season=${currentSeason}&episode=${currentEpisode}`;
       }
     }
 
@@ -138,12 +140,12 @@ export default function PlayerModal({
       <Server className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400 ml-1.5 md:ml-2 mr-1" />
       <span className="text-[9px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mr-1 md:mr-2 hidden lg:block">Server:</span>
       <button
-        onClick={() => setProvider('premium_backup')}
+        onClick={() => setProvider('vidsrc')}
         className={`px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold transition-colors cursor-pointer ${
-          provider === 'premium_backup' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
+          provider === 'vidsrc' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
         }`}
       >
-        Main
+        Main Stream
       </button>
       <button
         onClick={() => setProvider('vidking')}
