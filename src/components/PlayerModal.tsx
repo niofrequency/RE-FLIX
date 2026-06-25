@@ -22,25 +22,41 @@ export default function PlayerModal({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   
-  // Local state to manage seasons and episodes dynamically within the player
+  // Local state to manage seasons and episodes dynamically
   const [currentSeason, setCurrentSeason] = useState(season);
   const [currentEpisode, setCurrentEpisode] = useState(episode);
-  const [episodeCount, setEpisodeCount] = useState<number>(24); // Fallback count
+  const [episodeCount, setEpisodeCount] = useState<number>(24);
+  const [availableSeasons, setAvailableSeasons] = useState<number[]>([season]);
   
-  // DEFAULT TO VIDSRC: Since Vidking is currently down/blocking, we default to the working backup.
-  const [provider, setProvider] = useState<'vidking' | 'vidsrc'>('vidsrc');
+  const [provider, setProvider] = useState<'vidking' | 'premium_backup'>('premium_backup');
 
-  // Lock the background from scrolling while the video player is open
+  // Lock the background from scrolling
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
     document.body.style.overflow = 'hidden';
-    
     return () => {
       document.body.style.overflow = originalStyle;
     };
   }, []);
 
-  // Fetch the total number of episodes for the current season to populate the dropdown
+  // Fetch available seasons on mount
+  useEffect(() => {
+    if (movie?.media_type === 'tv') {
+      fetch(`/api/tv/${movie.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.seasons) {
+            const sNums = data.seasons
+              .map((s: any) => s.season_number)
+              .filter((n: number) => n > 0);
+            if (sNums.length > 0) setAvailableSeasons(sNums);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [movie]);
+
+  // Fetch the total number of episodes for the current season
   useEffect(() => {
     if (movie?.media_type === 'tv') {
       fetch(`/api/tv/${movie.id}/season/${currentSeason}`)
@@ -51,24 +67,22 @@ export default function PlayerModal({
           }
         })
         .catch(() => {
-          // Silent fallback
           setEpisodeCount(24);
         });
     }
   }, [movie, currentSeason]);
 
+  // Format embedding URL
   useEffect(() => {
     if (!movie) return;
 
     setIsLoading(true);
     setHasError(false);
 
-    // 1. Check for saved watching progress
     const saved = getProgress(movie.id);
     const hasProgress = saved && saved.currentTime > 5;
     const progressQuery = hasProgress ? `&progress=${Math.floor(saved.currentTime)}` : '';
 
-    // 2. Format embedding URL based on the selected server AND the current episode state
     let url = '';
     if (provider === 'vidking') {
       if (movie.media_type === 'movie') {
@@ -78,17 +92,17 @@ export default function PlayerModal({
       }
     } else {
       if (movie.media_type === 'movie') {
-        url = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
+        url = `https://embed.su/embed/movie/${movie.id}`;
       } else {
-        url = `https://vidsrc.me/embed/tv?tmdb=${movie.id}&season=${currentSeason}&episode=${currentEpisode}`;
+        url = `https://embed.su/embed/tv/${movie.id}/${currentSeason}/${currentEpisode}`;
       }
     }
 
     setIframeUrl(url);
   }, [movie, currentSeason, currentEpisode, provider]);
 
+  // Save Player Progress
   useEffect(() => {
-    // Only Vidking broadcasts the advanced postMessage API right now
     if (!movie || provider !== 'vidking') return; 
 
     const handlePlayerMessage = (event: MessageEvent) => {
@@ -96,38 +110,20 @@ export default function PlayerModal({
         const payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
 
         if (payload && payload.type === 'PLAYER_EVENT') {
-          const {
-            event: evType,
-            currentTime,
-            duration,
-            progress: progressPercent,
-            id: mediaId,
-            mediaType,
-            season: sNum,
-            episode: eNum
-          } = payload.data;
+          const { event: evType, currentTime, duration, progress: progressPercent, id: mediaId, mediaType, season: sNum, episode: eNum } = payload.data;
 
           if (['timeupdate', 'pause', 'ended'].includes(evType)) {
             saveProgress(
-              mediaId || movie.id,
-              currentTime,
-              duration,
+              mediaId || movie.id, currentTime, duration,
               progressPercent || (currentTime / duration) * 100,
               (mediaType as any) || movie.media_type,
               movie.title || movie.name || 'Untitled',
-              movie.backdrop_path,
-              sNum || currentSeason,
-              eNum || currentEpisode
+              movie.backdrop_path, sNum || currentSeason, eNum || currentEpisode
             );
-
-            if (onProgressUpdate) {
-              onProgressUpdate();
-            }
+            if (onProgressUpdate) onProgressUpdate();
           }
         }
-      } catch (err) {
-        // Benign: Ignore non-JSON messages
-      }
+      } catch (err) {}
     };
 
     window.addEventListener('message', handlePlayerMessage);
@@ -136,94 +132,125 @@ export default function PlayerModal({
 
   if (!movie) return null;
 
+  // Render variable for Server Switcher to avoid duplicating code for mobile/desktop layouts
+  const serverSwitcherUI = (
+    <div className="bg-black/60 backdrop-blur-md border border-white/10 p-1 md:p-1.5 rounded-lg flex items-center space-x-1 shadow-lg">
+      <Server className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400 ml-1.5 md:ml-2 mr-1" />
+      <span className="text-[9px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mr-1 md:mr-2 hidden lg:block">Server:</span>
+      <button
+        onClick={() => setProvider('premium_backup')}
+        className={`px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold transition-colors cursor-pointer ${
+          provider === 'premium_backup' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
+        }`}
+      >
+        Main
+      </button>
+      <button
+        onClick={() => setProvider('vidking')}
+        className={`px-2 md:px-3 py-1 md:py-1.5 rounded text-[10px] md:text-xs font-bold transition-colors cursor-pointer ${
+          provider === 'vidking' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
+        }`}
+      >
+        VidKing
+      </button>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center overflow-hidden">
       
-      {/* Top Controls: Floating Back Button, Episode Widget, & Server Switcher */}
-      <div className="absolute top-0 left-0 w-full p-4 md:p-6 flex flex-wrap gap-4 items-start justify-between z-50 bg-gradient-to-b from-black/90 via-black/40 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-        
-        <button
-          onClick={onClose}
-          className="p-3 md:p-4 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-90 shadow-lg"
-          title="Close Player"
-        >
-          <ArrowLeft className="w-6 h-6 md:w-8 md:h-8 drop-shadow-lg" />
-        </button>
-
-        {/* Dynamic Episode Picker & Next/Prev Controls */}
-        {movie.media_type === 'tv' && (
-          <div className="flex-1 flex justify-center">
-            <div className="bg-black/60 backdrop-blur-md border border-white/10 p-1.5 rounded-lg flex items-center space-x-3 shadow-lg">
-              
-              <button
-                onClick={() => setCurrentEpisode(prev => Math.max(1, prev - 1))}
-                disabled={currentEpisode <= 1}
-                className="p-1.5 md:p-2 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                title="Previous Episode"
-              >
-                <SkipBack className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-
-              <div className="flex flex-col items-center justify-center">
-                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest hidden md:block leading-none mb-1">
-                  Season {currentSeason}
-                </span>
-                <select
-                  value={currentEpisode}
-                  onChange={(e) => setCurrentEpisode(Number(e.target.value))}
-                  className="bg-transparent text-sm md:text-base font-bold text-white outline-none cursor-pointer text-center hover:text-[#e50914] transition-colors appearance-none"
-                  style={{ textAlignLast: 'center' }}
-                >
-                  {Array.from({ length: Math.max(episodeCount, currentEpisode) }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={num} className="bg-[#181818] text-white">
-                      Episode {num}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                onClick={() => setCurrentEpisode(prev => prev + 1)}
-                disabled={currentEpisode >= episodeCount}
-                className="p-1.5 md:p-2 text-gray-300 hover:text-[#e50914] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                title="Next Episode"
-              >
-                <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-
+      {/* Responsive Top Controls */}
+      <div className="absolute top-0 left-0 w-full p-3 md:p-6 z-50 bg-gradient-to-b from-black/90 via-black/40 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 w-full">
+          
+          {/* Mobile Top Row: Back Button & Server Switcher */}
+          <div className="flex justify-between items-center w-full md:w-auto">
+            <button
+              onClick={onClose}
+              className="p-2 md:p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-90 shadow-lg"
+              title="Close Player"
+            >
+              <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
+            </button>
+            <div className="block md:hidden">
+              {serverSwitcherUI}
             </div>
           </div>
-        )}
 
-        {/* Dynamic Server Switcher UI */}
-        <div className="bg-black/60 backdrop-blur-md border border-white/10 p-1.5 rounded-lg flex items-center space-x-1 shadow-lg ml-auto">
-          <Server className="w-4 h-4 text-gray-400 ml-2 mr-1" />
-          <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mr-2 hidden sm:block">Server:</span>
-          <button
-            onClick={() => setProvider('vidsrc')}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer ${
-              provider === 'vidsrc' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            Main Stream
-          </button>
-          <button
-            onClick={() => setProvider('vidking')}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer ${
-              provider === 'vidking' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            VidKing
-          </button>
+          {/* Episode & Season Picker Widget */}
+          {movie.media_type === 'tv' && (
+            <div className="flex-1 flex justify-center w-full md:w-auto">
+              <div className="bg-black/60 backdrop-blur-md border border-white/10 p-1 md:p-1.5 rounded-lg flex items-center shadow-lg max-w-full overflow-hidden">
+                
+                {/* Previous Episode */}
+                <button
+                  onClick={() => setCurrentEpisode(prev => Math.max(1, prev - 1))}
+                  disabled={currentEpisode <= 1}
+                  className="p-1.5 md:p-2 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <SkipBack className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+
+                {/* Season & Episode Dropdowns */}
+                <div className="flex items-center space-x-1 md:space-x-2 bg-[#181818]/80 px-2 md:px-3 py-1 md:py-1.5 rounded border border-white/5">
+                  <select
+                    value={currentSeason}
+                    onChange={(e) => {
+                      setCurrentSeason(Number(e.target.value));
+                      setCurrentEpisode(1); // Reset episode when season changes
+                    }}
+                    className="bg-transparent text-[11px] md:text-sm font-bold text-white outline-none cursor-pointer hover:text-[#e50914] transition-colors appearance-none text-center"
+                    style={{ textAlignLast: 'center' }}
+                  >
+                    {availableSeasons.map(num => (
+                      <option key={`s-${num}`} value={num} className="bg-[#181818] text-white">
+                        Season {num}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  <span className="text-gray-600 font-bold">:</span>
+                  
+                  <select
+                    value={currentEpisode}
+                    onChange={(e) => setCurrentEpisode(Number(e.target.value))}
+                    className="bg-transparent text-[11px] md:text-sm font-bold text-white outline-none cursor-pointer hover:text-[#e50914] transition-colors appearance-none text-center"
+                    style={{ textAlignLast: 'center' }}
+                  >
+                    {Array.from({ length: Math.max(episodeCount, currentEpisode) }, (_, i) => i + 1).map(num => (
+                      <option key={`e-${num}`} value={num} className="bg-[#181818] text-white">
+                        Ep {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Next Episode */}
+                <button
+                  onClick={() => setCurrentEpisode(prev => prev + 1)}
+                  disabled={currentEpisode >= episodeCount}
+                  className="p-1.5 md:p-2 text-gray-300 hover:text-[#e50914] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+
+              </div>
+            </div>
+          )}
+
+          {/* Desktop Server Switcher */}
+          <div className="hidden md:block">
+            {serverSwitcherUI}
+          </div>
+
         </div>
-
       </div>
 
       {/* Loading State Overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20">
-          <RefreshCw className="w-12 h-12 md:w-16 md:h-16 text-[#e50914] animate-spin mb-4" />
-          <p className="text-white font-medium tracking-wider animate-pulse text-sm md:text-base font-mono">
+          <RefreshCw className="w-10 h-10 md:w-16 md:h-16 text-[#e50914] animate-spin mb-4" />
+          <p className="text-white font-medium tracking-wider animate-pulse text-xs md:text-base font-mono">
             Loading {provider === 'vidking' ? 'VidKing' : 'Stream'} Engine...
           </p>
         </div>
@@ -232,10 +259,10 @@ export default function PlayerModal({
       {/* Error State Overlay */}
       {hasError ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20 p-4 text-center">
-          <AlertTriangle className="w-16 h-16 text-[#e50914] mb-4" />
-          <h3 className="text-white text-xl md:text-2xl font-bold mb-2">Stream Unavailable</h3>
-          <p className="text-gray-400 mb-6 text-sm max-w-md">
-            The streaming server refused connection. Try switching to an alternate server using the toggle at the top right.
+          <AlertTriangle className="w-12 h-12 md:w-16 md:h-16 text-[#e50914] mb-4" />
+          <h3 className="text-white text-lg md:text-2xl font-bold mb-2">Stream Unavailable</h3>
+          <p className="text-gray-400 mb-6 text-xs md:text-sm max-w-md">
+            The streaming server refused connection. Try switching to an alternate server using the toggle.
           </p>
           <div className="flex items-center space-x-4">
             <button
@@ -246,20 +273,19 @@ export default function PlayerModal({
                 setIframeUrl('');
                 setTimeout(() => setIframeUrl(url), 100);
               }}
-              className="bg-[#e50914] text-white px-6 py-3 rounded-md font-bold hover:bg-red-700 transition-transform active:scale-95 cursor-pointer shadow-lg"
+              className="bg-[#e50914] text-white px-5 py-2.5 md:px-6 md:py-3 rounded-md font-bold text-xs md:text-base hover:bg-red-700 transition-transform active:scale-95 cursor-pointer shadow-lg"
             >
-              Retry Connection
+              Retry
             </button>
             <button
               onClick={onClose}
-              className="bg-white/10 text-white px-6 py-3 rounded-md font-bold hover:bg-white/20 transition-transform active:scale-95 cursor-pointer shadow-lg border border-white/10"
+              className="bg-white/10 text-white px-5 py-2.5 md:px-6 md:py-3 rounded-md font-bold text-xs md:text-base hover:bg-white/20 transition-transform active:scale-95 cursor-pointer shadow-lg border border-white/10"
             >
               Go Back
             </button>
           </div>
         </div>
       ) : iframeUrl ? (
-        /* True Edge-to-Edge Iframe */
         <iframe
           id="streaming-player-iframe"
           src={iframeUrl}
