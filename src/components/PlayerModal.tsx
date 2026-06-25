@@ -24,11 +24,9 @@ export default function PlayerModal({
 
   // Lock the background from scrolling while the video player is open
   useEffect(() => {
-    // Store original overflow style
     const originalStyle = window.getComputedStyle(document.body).overflow;
     document.body.style.overflow = 'hidden';
     
-    // Cleanup on unmount (when modal closes)
     return () => {
       document.body.style.overflow = originalStyle;
     };
@@ -45,12 +43,12 @@ export default function PlayerModal({
     const hasProgress = saved && saved.currentTime > 5;
     const progressQuery = hasProgress ? `&progress=${Math.floor(saved.currentTime)}` : '';
 
-    // 2. Format embedding URL
+    // 2. Format embedding URL (Switched back to Vidking for the requested UI)
     let url = '';
     if (movie.media_type === 'movie') {
-      url = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
+      url = `https://www.vidking.net/embed/movie/${movie.id}?color=e50914&autoPlay=true${progressQuery}`;
     } else {
-      url = `https://vidsrc.me/embed/tv?tmdb=${movie.id}&season=${season}&episode=${episode}`;
+      url = `https://www.vidking.net/embed/tv/${movie.id}/${season}/${episode}?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true${progressQuery}`;
     }
 
     setIframeUrl(url);
@@ -94,7 +92,7 @@ export default function PlayerModal({
           }
         }
       } catch (err) {
-        // Ignore non-JSON messages
+        // Benign: Ignore non-JSON messages or messages from other extensions
       }
     };
 
@@ -104,37 +102,24 @@ export default function PlayerModal({
 
   if (!movie) return null;
 
-  const titleText = movie.title || movie.name || 'Untitled';
-  const playerLabel =
-    movie.media_type === 'movie'
-      ? titleText
-      : `${titleText} — Season ${season} Episode ${episode}`;
-
   return (
     <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center overflow-hidden">
       
-      {/* Sleek Auto-Hiding Top Control Bar */}
-      <div className="absolute top-0 left-0 w-full p-6 md:p-8 flex items-center justify-between z-50 bg-gradient-to-b from-black/90 via-black/40 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={onClose}
-            className="p-3 md:p-4 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-90"
-            title="Back to Browse"
-          >
-            <ArrowLeft className="w-6 h-6 md:w-8 md:h-8" />
-          </button>
-          <h2 className="text-white text-lg md:text-2xl font-bold tracking-wide drop-shadow-md hidden sm:block">
-            {playerLabel}
-          </h2>
-        </div>
-      </div>
+      {/* Sleek, unobtrusive Back Button hovering over the player */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 left-4 z-50 p-3 md:p-4 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-90"
+        title="Close Player"
+      >
+        <ArrowLeft className="w-6 h-6 md:w-8 md:h-8 drop-shadow-lg" />
+      </button>
 
       {/* Loading State Overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20">
           <RefreshCw className="w-12 h-12 md:w-16 md:h-16 text-[#e50914] animate-spin mb-4" />
           <p className="text-white font-medium tracking-wider animate-pulse text-sm md:text-base font-mono">
-            Establishing Secure Stream...
+            Loading Vidking Player...
           </p>
         </div>
       )}
@@ -169,16 +154,15 @@ export default function PlayerModal({
           </div>
         </div>
       ) : iframeUrl ? (
-        /* True Edge-to-Edge Iframe */
+        /* True Edge-to-Edge Iframe with strict Full Screen attributes */
         <iframe
           id="streaming-player-iframe"
           src={iframeUrl}
           className="absolute inset-0 w-full h-full border-0 z-10 bg-black"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-          allowFullScreen
+          allowFullScreen={true}
           onLoad={() => {
             setIsLoading(false);
-            // Fallback clear just in case load fires prematurely
             setTimeout(() => setIsLoading(false), 2000);
           }}
           onError={() => {
