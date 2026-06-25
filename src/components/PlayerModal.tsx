@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, RefreshCw, AlertTriangle, Server, SkipBack, SkipForward } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertTriangle, Server, SkipBack, SkipForward, ChevronDown } from 'lucide-react';
 import { MediaItem } from '../types';
 import { getProgress, saveProgress } from '../hooks/usePlayerProgress';
 
@@ -21,7 +21,12 @@ export default function PlayerModal({
   const [iframeUrl, setIframeUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   
+  // Custom Dropdown States
+  const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
+  const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
+
   // Local state to manage seasons and episodes dynamically
   const [currentSeason, setCurrentSeason] = useState(season);
   const [currentEpisode, setCurrentEpisode] = useState(episode);
@@ -92,7 +97,6 @@ export default function PlayerModal({
         url = `https://www.vidking.net/embed/tv/${movie.id}/${currentSeason}/${currentEpisode}?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true${progressQuery}`;
       }
     } else {
-      // Reverted to vidsrc.me based on working previous code
       if (movie.media_type === 'movie') {
         url = `https://vidsrc.me/embed/movie?tmdb=${movie.id}`;
       } else {
@@ -103,9 +107,9 @@ export default function PlayerModal({
     setIframeUrl(url);
   }, [movie, currentSeason, currentEpisode, provider]);
 
-  // Save Player Progress
+  // Save Player Progress & Detect Pause State
   useEffect(() => {
-    if (!movie || provider !== 'vidking') return; 
+    if (!movie) return; 
 
     const handlePlayerMessage = (event: MessageEvent) => {
       try {
@@ -113,6 +117,10 @@ export default function PlayerModal({
 
         if (payload && payload.type === 'PLAYER_EVENT') {
           const { event: evType, currentTime, duration, progress: progressPercent, id: mediaId, mediaType, season: sNum, episode: eNum } = payload.data;
+
+          // Track Pause/Play state for the UI Overlay
+          if (evType === 'pause') setIsPaused(true);
+          if (evType === 'play' || evType === 'playing') setIsPaused(false);
 
           if (['timeupdate', 'pause', 'ended'].includes(evType)) {
             saveProgress(
@@ -130,13 +138,12 @@ export default function PlayerModal({
 
     window.addEventListener('message', handlePlayerMessage);
     return () => window.removeEventListener('message', handlePlayerMessage);
-  }, [movie, currentSeason, currentEpisode, onProgressUpdate, provider]);
+  }, [movie, currentSeason, currentEpisode, onProgressUpdate]);
 
   if (!movie) return null;
 
-  // Render variable for Server Switcher to avoid duplicating code for mobile/desktop layouts
   const serverSwitcherUI = (
-    <div className="bg-black/60 backdrop-blur-md border border-white/10 p-1 md:p-1.5 rounded-lg flex items-center space-x-1 shadow-lg">
+    <div className="bg-black/80 backdrop-blur-md border border-white/10 p-1 md:p-1.5 rounded-lg flex items-center space-x-1 shadow-lg">
       <Server className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400 ml-1.5 md:ml-2 mr-1" />
       <span className="text-[9px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mr-1 md:mr-2 hidden lg:block">Server:</span>
       <button
@@ -161,77 +168,112 @@ export default function PlayerModal({
   return (
     <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center overflow-hidden">
       
-      {/* Responsive Top Controls */}
-      <div className="absolute top-0 left-0 w-full p-3 md:p-6 z-50 bg-gradient-to-b from-black/90 via-black/40 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 w-full">
+      {/* Invisible overlay to close dropdowns when clicking outside */}
+      {(showSeasonDropdown || showEpisodeDropdown) && (
+        <div 
+          className="absolute inset-0 z-40" 
+          onClick={() => { setShowSeasonDropdown(false); setShowEpisodeDropdown(false); }}
+        />
+      )}
+
+      {/* Top Controls & Netflix-Style Info Overlay */}
+      {/* Opacity remains 100 if Paused OR if a dropdown is open OR on hover */}
+      <div className={`absolute top-0 left-0 w-full p-4 md:p-8 z-50 bg-gradient-to-b from-black/95 via-black/60 to-transparent transition-opacity duration-500 ${isPaused || showSeasonDropdown || showEpisodeDropdown ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}>
+        
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full relative z-50">
           
-          {/* Mobile Top Row: Back Button & Server Switcher */}
-          <div className="flex justify-between items-center w-full md:w-auto">
+          <div className="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-start">
             <button
               onClick={onClose}
-              className="p-2 md:p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-90 shadow-lg"
-              title="Close Player"
+              className="p-3 bg-black/60 hover:bg-white hover:text-black text-white rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/10 flex items-center justify-center active:scale-90 shadow-lg"
+              title="Back to Browse"
             >
-              <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
+              <ArrowLeft className="w-6 h-6" />
             </button>
             <div className="block md:hidden">
               {serverSwitcherUI}
             </div>
           </div>
 
-          {/* Episode & Season Picker Widget */}
+          {/* Sleek Custom Episode & Season Picker Widget */}
           {movie.media_type === 'tv' && (
             <div className="flex-1 flex justify-center w-full md:w-auto">
-              <div className="bg-black/60 backdrop-blur-md border border-white/10 p-1 md:p-1.5 rounded-lg flex items-center shadow-lg max-w-full overflow-hidden">
+              <div className="bg-black/80 backdrop-blur-md border border-white/10 p-1.5 rounded-full flex items-center shadow-2xl max-w-full">
                 
-                {/* Previous Episode */}
                 <button
                   onClick={() => setCurrentEpisode(prev => Math.max(1, prev - 1))}
                   disabled={currentEpisode <= 1}
-                  className="p-1.5 md:p-2 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="p-2 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors rounded-full hover:bg-white/10"
                 >
                   <SkipBack className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
 
-                {/* Season & Episode Dropdowns */}
-                <div className="flex items-center space-x-1 md:space-x-2 bg-[#181818]/80 px-2 md:px-3 py-1 md:py-1.5 rounded border border-white/5">
-                  <select
-                    value={currentSeason}
-                    onChange={(e) => {
-                      setCurrentSeason(Number(e.target.value));
-                      setCurrentEpisode(1); // Reset episode when season changes
-                    }}
-                    className="bg-transparent text-[11px] md:text-sm font-bold text-white outline-none cursor-pointer hover:text-[#e50914] transition-colors appearance-none text-center"
-                    style={{ textAlignLast: 'center' }}
-                  >
-                    {availableSeasons.map(num => (
-                      <option key={`s-${num}`} value={num} className="bg-[#181818] text-white">
-                        Season {num}
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex items-center px-2 md:px-4 space-x-2 md:space-x-4">
+                  {/* Custom Season Dropdown */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => { setShowSeasonDropdown(!showSeasonDropdown); setShowEpisodeDropdown(false); }}
+                      className="flex items-center space-x-1 text-xs md:text-sm font-bold text-white hover:text-gray-300 transition-colors py-1"
+                    >
+                      <span>Season {currentSeason}</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showSeasonDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showSeasonDropdown && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-36 bg-[#141414] border border-gray-800 rounded shadow-2xl max-h-64 overflow-y-auto py-2 z-50">
+                        {availableSeasons.map(num => (
+                          <button
+                            key={`s-${num}`}
+                            onClick={() => { setCurrentSeason(num); setCurrentEpisode(1); setShowSeasonDropdown(false); }}
+                            className={`w-full text-left px-4 py-2.5 text-xs md:text-sm transition-colors ${
+                              currentSeason === num
+                                ? 'bg-white/10 text-white font-bold border-l-2 border-[#e50914]'
+                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            Season {num}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   
                   <span className="text-gray-600 font-bold">:</span>
                   
-                  <select
-                    value={currentEpisode}
-                    onChange={(e) => setCurrentEpisode(Number(e.target.value))}
-                    className="bg-transparent text-[11px] md:text-sm font-bold text-white outline-none cursor-pointer hover:text-[#e50914] transition-colors appearance-none text-center"
-                    style={{ textAlignLast: 'center' }}
-                  >
-                    {Array.from({ length: Math.max(episodeCount, currentEpisode) }, (_, i) => i + 1).map(num => (
-                      <option key={`e-${num}`} value={num} className="bg-[#181818] text-white">
-                        Ep {num}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Custom Episode Dropdown */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => { setShowEpisodeDropdown(!showEpisodeDropdown); setShowSeasonDropdown(false); }}
+                      className="flex items-center space-x-1 text-xs md:text-sm font-bold text-white hover:text-gray-300 transition-colors py-1"
+                    >
+                      <span>Ep {currentEpisode}</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showEpisodeDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showEpisodeDropdown && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-36 bg-[#141414] border border-gray-800 rounded shadow-2xl max-h-64 overflow-y-auto py-2 z-50">
+                        {Array.from({ length: Math.max(episodeCount, currentEpisode) }, (_, i) => i + 1).map(num => (
+                          <button
+                            key={`e-${num}`}
+                            onClick={() => { setCurrentEpisode(num); setShowEpisodeDropdown(false); }}
+                            className={`w-full text-left px-4 py-2.5 text-xs md:text-sm transition-colors ${
+                              currentEpisode === num
+                                ? 'bg-white/10 text-white font-bold border-l-2 border-[#e50914]'
+                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            Episode {num}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Next Episode */}
                 <button
                   onClick={() => setCurrentEpisode(prev => prev + 1)}
                   disabled={currentEpisode >= episodeCount}
-                  className="p-1.5 md:p-2 text-gray-300 hover:text-[#e50914] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="p-2 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors rounded-full hover:bg-white/10"
                 >
                   <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
@@ -240,12 +282,26 @@ export default function PlayerModal({
             </div>
           )}
 
-          {/* Desktop Server Switcher */}
           <div className="hidden md:block">
             {serverSwitcherUI}
           </div>
-
         </div>
+
+        {/* Netflix-Style Title & Description (Visible on Hover or Pause) */}
+        <div className="mt-8 md:mt-12 max-w-2xl px-2 relative z-0 pointer-events-none">
+          <h1 className="text-3xl md:text-5xl font-black text-white drop-shadow-2xl mb-2 md:mb-3">
+            {movie.title || movie.name}
+          </h1>
+          {movie.media_type === 'tv' && (
+            <h2 className="text-lg md:text-xl font-bold text-gray-300 drop-shadow-lg mb-3 md:mb-4">
+              Season {currentSeason} • Episode {currentEpisode}
+            </h2>
+          )}
+          <p className="text-xs md:text-sm text-gray-200 line-clamp-3 md:line-clamp-4 drop-shadow-xl leading-relaxed">
+            {movie.overview}
+          </p>
+        </div>
+
       </div>
 
       {/* Loading State Overlay */}
