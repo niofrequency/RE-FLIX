@@ -343,15 +343,17 @@ export default function PlayerModal({
             </button>
           </div>
         </div>
-      ) : iframeUrl ? (
+ ) : iframeUrl ? (
         <iframe
           id="streaming-player-iframe"
           src={iframeUrl}
+          // Added allow="fullscreen" and referrerPolicy="no-referrer" to fix mobile loading
           className="absolute inset-0 w-full h-full border-0 z-10 bg-black"
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          referrerPolicy="no-referrer"
           onLoad={() => {
+            // Keep this logic - it's fine
             setIsLoading(false);
-            setTimeout(() => setIsLoading(false), 2000);
           }}
           onError={() => {
             setIsLoading(false);
