@@ -22,8 +22,8 @@ export default function PlayerModal({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   
-  // NEW: Multi-provider support to bypass anti-adblockers and dead servers
-  const [provider, setProvider] = useState<'vidking' | 'vidsrc'>('vidking');
+  // DEFAULT TO VIDSRC: Since Vidking is currently down/blocking, we default to the working backup.
+  const [provider, setProvider] = useState<'vidking' | 'vidsrc'>('vidsrc');
 
   // Lock the background from scrolling while the video player is open
   useEffect(() => {
@@ -133,20 +133,20 @@ export default function PlayerModal({
           <Server className="w-4 h-4 text-gray-400 ml-2 mr-1" />
           <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mr-2 hidden sm:block">Server:</span>
           <button
-            onClick={() => setProvider('vidking')}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer ${
-              provider === 'vidking' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            VidKing
-          </button>
-          <button
             onClick={() => setProvider('vidsrc')}
             className={`px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer ${
               provider === 'vidsrc' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
             }`}
           >
-            Backup Stream
+            Main Stream
+          </button>
+          <button
+            onClick={() => setProvider('vidking')}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-colors cursor-pointer ${
+              provider === 'vidking' ? 'bg-[#e50914] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            VidKing (Offline)
           </button>
         </div>
 
@@ -157,7 +157,7 @@ export default function PlayerModal({
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20">
           <RefreshCw className="w-12 h-12 md:w-16 md:h-16 text-[#e50914] animate-spin mb-4" />
           <p className="text-white font-medium tracking-wider animate-pulse text-sm md:text-base font-mono">
-            Loading {provider === 'vidking' ? 'VidKing' : 'Backup'} Engine...
+            Loading {provider === 'vidking' ? 'VidKing' : 'Stream'} Engine...
           </p>
         </div>
       )}
@@ -168,7 +168,7 @@ export default function PlayerModal({
           <AlertTriangle className="w-16 h-16 text-[#e50914] mb-4" />
           <h3 className="text-white text-xl md:text-2xl font-bold mb-2">Stream Unavailable</h3>
           <p className="text-gray-400 mb-6 text-sm max-w-md">
-            The streaming server refused connection. Try switching to the Backup Stream using the toggle at the top right.
+            The streaming server refused connection. Try switching to an alternate server using the toggle at the top right.
           </p>
           <div className="flex items-center space-x-4">
             <button
