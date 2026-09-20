@@ -178,9 +178,10 @@ export default function PlayerModal({
 
       {/* Top Controls & Netflix-Style Info Overlay */}
       {/* Opacity remains 100 if Paused OR if a dropdown is open OR on hover */}
-      <div className={`absolute top-0 left-0 w-full p-4 md:p-8 z-50 bg-gradient-to-b from-black/95 via-black/60 to-transparent transition-opacity duration-500 ${isPaused || showSeasonDropdown || showEpisodeDropdown ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}>
-        
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full relative z-50">
+      {/* pointer-events-none here so the gradient/title never blocks clicks on the native player UI (e.g. the quality menu) underneath; only the actual control row re-enables pointer events */}
+      <div className={`absolute top-0 left-0 w-full p-4 md:p-8 z-50 bg-gradient-to-b from-black/95 via-black/60 to-transparent transition-opacity duration-500 pointer-events-none ${isPaused || showSeasonDropdown || showEpisodeDropdown ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}>
+
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full relative z-50 pointer-events-auto">
           
           <div className="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-start">
             <button

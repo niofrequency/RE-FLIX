@@ -64,10 +64,38 @@ app.get('/api/movies/popular', async (req: Request, res: Response) => {
   }
 });
 
+// 2b. Now Playing Movies Route (currently in theaters)
+app.get('/api/movies/now-playing', async (req: Request, res: Response) => {
+  try {
+    const data = await fetchFromTMDB('movie/now_playing');
+    const results = data.results.map((item: any) => ({
+      ...item,
+      media_type: 'movie'
+    }));
+    res.json({ results });
+  } catch (error) {
+    res.json({ results: CURATED_MOVIES });
+  }
+});
+
 // 3. Popular TV Shows Route
 app.get('/api/tv/popular', async (req: Request, res: Response) => {
   try {
     const data = await fetchFromTMDB('tv/popular');
+    const results = data.results.map((item: any) => ({
+      ...item,
+      media_type: 'tv'
+    }));
+    res.json({ results });
+  } catch (error) {
+    res.json({ results: CURATED_TV_SHOWS });
+  }
+});
+
+// 3b. On The Air TV Route (currently airing)
+app.get('/api/tv/on-the-air', async (req: Request, res: Response) => {
+  try {
+    const data = await fetchFromTMDB('tv/on_the_air');
     const results = data.results.map((item: any) => ({
       ...item,
       media_type: 'tv'
