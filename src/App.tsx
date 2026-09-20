@@ -7,7 +7,6 @@ import PlayerModal from './components/PlayerModal';
 import BentoShowcase from './components/BentoShowcase';
 import { MediaItem } from './types';
 import { useContinueWatching } from './hooks/usePlayerProgress';
-import { CURATED_MOVIES, CURATED_TV_SHOWS } from './data/curatedMovies';
 import { RefreshCw, Play, Plus, Star } from 'lucide-react';
 
 export default function App() {
@@ -21,6 +20,8 @@ export default function App() {
   const [popularMovies, setPopularMovies] = useState<MediaItem[]>([]);
   const [popularTV, setPopularTV] = useState<MediaItem[]>([]);
   const [topRatedTV, setTopRatedTV] = useState<MediaItem[]>([]);
+  const [nowPlayingMovies, setNowPlayingMovies] = useState<MediaItem[]>([]);
+  const [onTheAirTV, setOnTheAirTV] = useState<MediaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Modal & Player States
@@ -52,30 +53,25 @@ export default function App() {
     const fetchMetadata = async () => {
       setIsLoading(true);
       try {
-        const [resTrending, resPopularMovies, resPopularTV, resTopRatedTV] = await Promise.all([
+        const [resTrending, resPopularMovies, resPopularTV, resTopRatedTV, resNowPlaying, resOnTheAir] = await Promise.all([
           fetch('/api/trending').then(r => r.json()).catch(() => ({ results: [] })),
           fetch('/api/movies/popular').then(r => r.json()).catch(() => ({ results: [] })),
           fetch('/api/tv/popular').then(r => r.json()).catch(() => ({ results: [] })),
-          fetch('/api/tv/top-rated').then(r => r.json()).catch(() => ({ results: [] }))
+          fetch('/api/tv/top-rated').then(r => r.json()).catch(() => ({ results: [] })),
+          fetch('/api/movies/now-playing').then(r => r.json()).catch(() => ({ results: [] })),
+          fetch('/api/tv/on-the-air').then(r => r.json()).catch(() => ({ results: [] }))
         ]);
 
-        // Guard empty list results by injecting curated fallbacks
-        setTrending(resTrending.results?.length ? resTrending.results : [
-          ...CURATED_MOVIES.slice(0, 4),
-          ...CURATED_TV_SHOWS.slice(0, 4)
-        ]);
-
-        setPopularMovies(resPopularMovies.results?.length ? resPopularMovies.results : CURATED_MOVIES);
-        setPopularTV(resPopularTV.results?.length ? resPopularTV.results : CURATED_TV_SHOWS);
-        setTopRatedTV(resTopRatedTV.results?.length ? resTopRatedTV.results : [...CURATED_TV_SHOWS].reverse());
+        // Always reflect the live, current catalog - no static/hardcoded defaults
+        setTrending(resTrending.results || []);
+        setPopularMovies(resPopularMovies.results || []);
+        setPopularTV(resPopularTV.results || []);
+        setTopRatedTV(resTopRatedTV.results || []);
+        setNowPlayingMovies(resNowPlaying.results || []);
+        setOnTheAirTV(resOnTheAir.results || []);
 
       } catch (err) {
         console.error('Error fetching metadata:', err);
-        // Fallbacks
-        setTrending([...CURATED_MOVIES.slice(0, 4), ...CURATED_TV_SHOWS.slice(0, 4)]);
-        setPopularMovies(CURATED_MOVIES);
-        setPopularTV(CURATED_TV_SHOWS);
-        setTopRatedTV([...CURATED_TV_SHOWS].reverse());
       } finally {
         setIsLoading(false);
       }
@@ -129,14 +125,14 @@ export default function App() {
     setSelectedMovieForInfo(null);
   };
 
-  // Compile a list of all favorite items from both curated data and live results
+  // Compile a list of all favorite items from live results
   const allKnownMediaItems = [
-    ...CURATED_MOVIES,
-    ...CURATED_TV_SHOWS,
     ...trending,
     ...popularMovies,
     ...popularTV,
     ...topRatedTV,
+    ...nowPlayingMovies,
+    ...onTheAirTV,
     ...searchResults
   ];
 
@@ -172,8 +168,8 @@ export default function App() {
     };
   });
 
-  // Get prominent featured movie for the homepage (e.g. Interstellar or first trending movie)
-  const featuredHeroMovie = trending[0] || CURATED_MOVIES[0];
+  // Get prominent featured movie for the homepage - always the current #1 trending title, live from TMDB
+  const featuredHeroMovie = trending[0] || popularMovies[0] || null;
 
   return (
     <div className="min-h-screen bg-[#141414] text-white flex flex-col font-sans selection:bg-[#e50914] selection:text-white pb-24">
@@ -229,7 +225,7 @@ export default function App() {
           ) : (
             <div className="text-center py-32 space-y-2">
               <p className="text-gray-400 text-sm md:text-base">No titles matched your query.</p>
-              <p className="text-gray-600 text-xs">Try searching for alternative keywords like "Stranger", "Dune", "Interstellar".</p>
+              <p className="text-gray-600 text-xs">Try searching for a different title, actor, or genre.</p>
             </div>
           )}
         </main>
@@ -249,8 +245,8 @@ export default function App() {
               <div className="space-y-10 md:space-y-14 -mt-16 md:-mt-24 relative z-20">
                 {/* Bento Grid Dashboard Showcase */}
                 <BentoShowcase
-                  trendingItem={trending[1] || CURATED_MOVIES[1] || null}
-                  recommendedItem={trending[2] || CURATED_TV_SHOWS[0] || null}
+                  trendingItem={trending[1] || popularMovies[0] || null}
+                  recommendedItem={trending[2] || popularTV[0] || null}
                   continueWatchingItem={continueWatching.items[0] || null}
                   onPlay={handlePlayMovie}
                   onInfo={setSelectedMovieForInfo}
@@ -326,24 +322,24 @@ export default function App() {
           {activeTab === 'movies' && (
             <div className="space-y-12">
               <HeroBanner
-                movie={CURATED_MOVIES[0]}
+                movie={nowPlayingMovies[0] || popularMovies[0] || null}
                 onPlay={handlePlayMovie}
                 onInfo={setSelectedMovieForInfo}
               />
               <div className="space-y-10 -mt-16 md:-mt-24 relative z-20">
                 <MovieRow
-                  id="category-popular-movies"
-                  title="Popular Movies"
-                  movies={popularMovies}
+                  id="category-now-playing-movies"
+                  title="Now Playing in Theaters"
+                  movies={nowPlayingMovies}
                   onPlay={handlePlayMovie}
                   onInfo={setSelectedMovieForInfo}
                   favorites={favorites}
                   onToggleFavorite={handleToggleFavorite}
                 />
                 <MovieRow
-                  id="category-curated-movies"
-                  title="RE-FLIX Curated Blockbusters"
-                  movies={CURATED_MOVIES}
+                  id="category-popular-movies"
+                  title="Popular Movies"
+                  movies={popularMovies}
                   onPlay={handlePlayMovie}
                   onInfo={setSelectedMovieForInfo}
                   favorites={favorites}
@@ -356,11 +352,20 @@ export default function App() {
           {activeTab === 'tv' && (
             <div className="space-y-12">
               <HeroBanner
-                movie={CURATED_TV_SHOWS[0]}
+                movie={onTheAirTV[0] || popularTV[0] || null}
                 onPlay={handlePlayMovie}
                 onInfo={setSelectedMovieForInfo}
               />
               <div className="space-y-10 -mt-16 md:-mt-24 relative z-20">
+                <MovieRow
+                  id="category-on-the-air-tv"
+                  title="Currently Airing"
+                  movies={onTheAirTV}
+                  onPlay={handlePlayMovie}
+                  onInfo={setSelectedMovieForInfo}
+                  favorites={favorites}
+                  onToggleFavorite={handleToggleFavorite}
+                />
                 <MovieRow
                   id="category-popular-tv"
                   title="Popular TV Series"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, User, X } from 'lucide-react';
+import { Search, Bell, User, X, Home, Clapperboard, Tv, Bookmark } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HeaderProps {
@@ -39,13 +39,14 @@ export default function Header({ onSearch, activeTab, setActiveTab }: HeaderProp
   };
 
   const menuItems = [
-    { id: 'home', label: 'Home' },
-    { id: 'movies', label: 'Movies' },
-    { id: 'tv', label: 'TV Shows' },
-    { id: 'list', label: 'My List' }
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'movies', label: 'Movies', icon: Clapperboard },
+    { id: 'tv', label: 'TV Shows', icon: Tv },
+    { id: 'list', label: 'My List', icon: Bookmark }
   ] as const;
 
   return (
+    <>
     <header
       id="header-nav"
       className={`fixed top-0 left-0 w-full z-50 transition-colors duration-300 flex items-center justify-between px-4 md:px-12 py-4 ${
@@ -54,12 +55,15 @@ export default function Header({ onSearch, activeTab, setActiveTab }: HeaderProp
     >
       <div className="flex items-center space-x-4 md:space-x-10">
         {/* RE-FLIX Logo */}
-        <div 
+        <div
           id="reflix-logo"
           onClick={() => { setActiveTab('home'); handleClearSearch(); }}
-          className="text-[#e50914] font-black text-2xl md:text-3xl tracking-tighter cursor-pointer font-sans select-none hover:scale-105 transition-transform"
+          className="flex items-center space-x-1.5 md:space-x-2 cursor-pointer select-none hover:scale-105 transition-transform"
         >
-          RE-FLIX
+          <img src="/favicon.svg" alt="" className="w-6 h-6 md:w-7 md:h-7 rounded" />
+          <span className="text-white font-black text-xl md:text-2xl tracking-tighter font-sans">
+            RE-<span className="text-[#e50914]">FLIX</span>
+          </span>
         </div>
 
         {/* Navigation Items */}
@@ -77,6 +81,7 @@ export default function Header({ onSearch, activeTab, setActiveTab }: HeaderProp
             </button>
           ))}
         </nav>
+
       </div>
 
       <div className="flex items-center space-x-4">
@@ -148,5 +153,27 @@ export default function Header({ onSearch, activeTab, setActiveTab }: HeaderProp
         </div>
       </div>
     </header>
+
+    {/* Mobile Bottom Tab Bar */}
+    <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-[#141414]/95 backdrop-blur-md border-t border-white/10 flex items-center justify-around px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      {menuItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = activeTab === item.id;
+        return (
+          <button
+            key={item.id}
+            id={`mobile-nav-link-${item.id}`}
+            onClick={() => { setActiveTab(item.id); handleClearSearch(); }}
+            className={`flex flex-col items-center justify-center flex-1 py-1.5 rounded-md transition-colors cursor-pointer ${
+              isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+            <span className={`text-[10px] mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+    </>
   );
 }

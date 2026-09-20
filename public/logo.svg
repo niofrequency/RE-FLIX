@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 64" width="300" height="64" role="img" aria-label="RE-FLIX">
+  <defs>
+    <linearGradient id="reflix-mark" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e50914"/>
+      <stop offset="1" stop-color="#b0060f"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="4" width="56" height="56" rx="12" fill="url(#reflix-mark)"/>
+  <path d="M22 18 L40 32 L22 46 Z" fill="#ffffff"/>
+  <text x="70" y="45" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="34" letter-spacing="-1" fill="#ffffff">RE-<tspan fill="#e50914">FLIX</tspan></text>
+</svg>
