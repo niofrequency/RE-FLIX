@@ -352,9 +352,6 @@ export default function PlayerModal({
           className="absolute inset-0 w-full h-full border-0 z-10 bg-black"
           allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           referrerPolicy="no-referrer"
-          // No allow-popups / allow-top-navigation: blocks the ad-redirect and popup-window
-          // tricks these free embed providers inject on click, without breaking playback.
-          sandbox="allow-scripts allow-same-origin allow-presentation"
           onLoad={() => {
             // Keep this logic - it's fine
             setIsLoading(false);
