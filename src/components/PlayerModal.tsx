@@ -352,6 +352,12 @@ export default function PlayerModal({
           className="absolute inset-0 w-full h-full border-0 z-10 bg-black"
           allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           referrerPolicy="no-referrer"
+          // allowFullScreen (+ legacy prefixed attrs) is required in addition to the
+          // Permissions-Policy "fullscreen" above for requestFullscreen() to actually
+          // work when called from inside the (cross-origin) player iframe.
+          allowFullScreen
+          webkitallowfullscreen="true"
+          mozallowfullscreen="true"
           onLoad={() => {
             // Keep this logic - it's fine
             setIsLoading(false);
